@@ -41,11 +41,9 @@ const (
 	SortMoviesByTitle = `SELECT id, title, descr, release, rating, array_agg(a.names) AS actors FROM Movies m LEFT JOIN ActorMovie am ON m.id = am.movie_id 
 	LEFT JOIN Actors a ON am.actor_id = a.id GROUP BY m.id, m.title, m.descr, m.release, m.rating ORDER BY m.title;`
 
-	SearchByTitle = `SELECT m.id, m.title, m.descr, m.release, m.rating, array_agg(a.names) AS actors FROM Movies m LEFT JOIN ActorMovie am ON m.id = am.movie_id
-	LEFT JOIN Actors a ON am.actor_id = a.id WHERE m.title ILIKE '%' || $1 || '%' GROUP BY m.id, m.title, m.descr, m.release, m.rating;`
-
-	SearchByActor = `SELECT m.id, m.title, m.descr, m.release, m.rating, array_agg(a.name) AS actors FROM Movies m LEFT JOIN ActorMovie am ON m.id = am.movie_id
-	LEFT JOIN Actors a ON am.actor_id = a.id WHERE a.name ILIKE '%' || $1 || '%' GROUP BY m.id, m.title, m.descr, m.release, m.rating;`
+	SearchMovie = `SELECT m.id AS movie_id, m.title AS movie_title, m.descr, m.release, m.rating, array_agg(a.names) AS actors FROM Movies m
+	LEFT JOIN ActorMovie am ON m.id = am.movie_id LEFT JOIN Actors a ON am.actor_id = a.id WHERE m.title ILIKE '%' || $1 || '%' OR a.names ILIKE '%' || $1 || '%'
+	GROUP BY m.id, m.title, m.descr, m.release, m.rating;`
 )
 
 func NewMovieRepository(db *sqlx.DB) *MovieRepository {
@@ -262,38 +260,10 @@ func (repository *MovieRepository) GetAllMoviesByReleaseDate(ctx context.Context
 
 }
 
-func (repository *MovieRepository) SearchMovieByTitle(ctx context.Context) (map[*core.Movie][]string, error) {
+func (repository *MovieRepository) SearchMovie(ctx context.Context, search string) (map[*core.Movie][]string, error) {
 	var movies map[*core.Movie][]string
 
-	rows, err := repository.Db.QueryContext(ctx, SearchByTitle)
-	if err == sql.ErrNoRows {
-		log.Info(err.Error())
-		return nil, fmt.Errorf("Internal server error")
-	}
-	if err != nil {
-		log.Info(err.Error())
-		return nil, fmt.Errorf("Internal server error")
-	}
-
-	for rows.Next() {
-		movie := &core.Movie{}
-		movie_actors := []string{}
-		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, movie_actors)
-
-		if err != nil {
-			log.Info(err.Error())
-			return nil, fmt.Errorf("Internal server error")
-		}
-		movies[movie] = movie_actors
-	}
-
-	return movies, nil
-}
-
-func (repository *MovieRepository) SearchMovieByActor(ctx context.Context) (map[*core.Movie][]string, error) {
-	var movies map[*core.Movie][]string
-
-	rows, err := repository.Db.QueryContext(ctx, SearchByActor)
+	rows, err := repository.Db.QueryContext(ctx, SearchMovie, search)
 	if err == sql.ErrNoRows {
 		log.Info(err.Error())
 		return nil, fmt.Errorf("Internal server error")

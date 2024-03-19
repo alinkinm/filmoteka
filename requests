@@ -1,0 +1,1 @@
+curl -d '{"title":"BBC Sherlock", "descr":"Dr Watson, a former army doctor, finds himself sharing a flat with...","release":"2010-07-25", "rating":10, "actors": [1,2]}' -H "Content-Type: application/json" -X POST http://localhost:8080/movie

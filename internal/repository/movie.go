@@ -50,7 +50,7 @@ func NewMovieRepository(db *sqlx.DB) *MovieRepository {
 	return &MovieRepository{Db: db}
 }
 
-func (repository *MovieRepository) CreateMovie(ctx context.Context, movie *core.Movie, actors []int) error {
+func (repository *MovieRepository) CreateMovie(ctx context.Context, movie *core.Movie) error {
 
 	tx, err := repository.Db.Begin()
 	if err != nil {
@@ -60,7 +60,9 @@ func (repository *MovieRepository) CreateMovie(ctx context.Context, movie *core.
 
 	defer tx.Rollback()
 
-	_, err = tx.ExecContext(ctx, CreateMovie, movie.Title, movie.Descr, movie.Release, movie.Rating)
+	newid := -1
+	err = tx.QueryRowContext(ctx, CreateMovie, movie.Title, movie.Descr, movie.Release, movie.Rating).Scan(&newid)
+	movie.Id = newid
 
 	var e *pgconn.PgError
 	if err != nil {
@@ -71,7 +73,7 @@ func (repository *MovieRepository) CreateMovie(ctx context.Context, movie *core.
 		return fmt.Errorf("Internal server error")
 	}
 
-	_, err = tx.ExecContext(ctx, AddActorsToMovie, actors, movie.Id)
+	_, err = tx.ExecContext(ctx, AddActorsToMovie, movie.Actors, movie.Id)
 
 	if err != nil {
 		log.Info(err.Error())
@@ -173,9 +175,9 @@ func (repository *MovieRepository) DeleteActors(ctx context.Context, id int, act
 	return nil
 }
 
-func (repository *MovieRepository) GetAllMoviesByRating(ctx context.Context) (map[*core.Movie][]string, error) {
+func (repository *MovieRepository) GetAllMoviesByRating(ctx context.Context) ([]*core.Movie, error) {
 
-	var movies map[*core.Movie][]string
+	var movies []*core.Movie
 
 	rows, err := repository.Db.QueryContext(ctx, SortMoviesByRating)
 	if err == sql.ErrNoRows {
@@ -189,21 +191,20 @@ func (repository *MovieRepository) GetAllMoviesByRating(ctx context.Context) (ma
 
 	for rows.Next() {
 		movie := &core.Movie{}
-		movie_actors := []string{}
-		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, movie_actors)
+		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, &movie.Actors)
 
 		if err != nil {
 			log.Info(err.Error())
 			return nil, fmt.Errorf("Internal server error")
 		}
-		movies[movie] = movie_actors
+		movies = append(movies, movie)
 	}
 
 	return movies, nil
 }
 
-func (repository *MovieRepository) GetAllMoviesByTitle(ctx context.Context) (map[*core.Movie][]string, error) {
-	var movies map[*core.Movie][]string
+func (repository *MovieRepository) GetAllMoviesByTitle(ctx context.Context) ([]*core.Movie, error) {
+	var movies []*core.Movie
 
 	rows, err := repository.Db.QueryContext(ctx, SortMoviesByTitle)
 	if err == sql.ErrNoRows {
@@ -217,22 +218,21 @@ func (repository *MovieRepository) GetAllMoviesByTitle(ctx context.Context) (map
 
 	for rows.Next() {
 		movie := &core.Movie{}
-		movie_actors := []string{}
-		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, movie_actors)
+		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, &movie.Actors)
 
 		if err != nil {
 			log.Info(err.Error())
 			return nil, fmt.Errorf("Internal server error")
 		}
-		movies[movie] = movie_actors
+		movies = append(movies, movie)
 	}
 
 	return movies, nil
 
 }
 
-func (repository *MovieRepository) GetAllMoviesByReleaseDate(ctx context.Context) (map[*core.Movie][]string, error) {
-	var movies map[*core.Movie][]string
+func (repository *MovieRepository) GetAllMoviesByReleaseDate(ctx context.Context) ([]*core.Movie, error) {
+	var movies []*core.Movie
 
 	rows, err := repository.Db.QueryContext(ctx, SortMoviesByReleaseDate)
 	if err == sql.ErrNoRows {
@@ -246,22 +246,21 @@ func (repository *MovieRepository) GetAllMoviesByReleaseDate(ctx context.Context
 
 	for rows.Next() {
 		movie := &core.Movie{}
-		movie_actors := []string{}
-		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, movie_actors)
+		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, &movie.Actors)
 
 		if err != nil {
 			log.Info(err.Error())
 			return nil, fmt.Errorf("Internal server error")
 		}
-		movies[movie] = movie_actors
+		movies = append(movies, movie)
 	}
 
 	return movies, nil
 
 }
 
-func (repository *MovieRepository) SearchMovie(ctx context.Context, search string) (map[*core.Movie][]string, error) {
-	var movies map[*core.Movie][]string
+func (repository *MovieRepository) SearchMovie(ctx context.Context, search string) ([]*core.Movie, error) {
+	var movies []*core.Movie
 
 	rows, err := repository.Db.QueryContext(ctx, SearchMovie, search)
 	if err == sql.ErrNoRows {
@@ -275,14 +274,13 @@ func (repository *MovieRepository) SearchMovie(ctx context.Context, search strin
 
 	for rows.Next() {
 		movie := &core.Movie{}
-		movie_actors := []string{}
-		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, movie_actors)
+		err = rows.Scan(&movie.Id, &movie.Title, &movie.Descr, &movie.Release, &movie.Rating, &movie.Actors)
 
 		if err != nil {
 			log.Info(err.Error())
 			return nil, fmt.Errorf("Internal server error")
 		}
-		movies[movie] = movie_actors
+		movies = append(movies, movie)
 	}
 
 	return movies, nil

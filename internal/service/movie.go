@@ -7,27 +7,27 @@ import (
 )
 
 type MovieRepository interface {
-	CreateMovie(ctx context.Context, movie *core.Movie, actors []int) error
+	CreateMovie(ctx context.Context, movie *core.Movie) error
 	DeleteMovie() error
 	UpdateMovie(ctx context.Context, id int, columnName string, newValue interface{}) error
 	AddActors(ctx context.Context, id int, actors []string) error
 	DeleteActors(ctx context.Context, id int, actors []string) error
-	GetAllMoviesByRating(ctx context.Context) (map[*core.Movie][]string, error)
-	GetAllMoviesByTitle(ctx context.Context) (map[*core.Movie][]string, error)
-	GetAllMoviesByReleaseDate(ctx context.Context) (map[*core.Movie][]string, error)
-	SearchMovie(ctx context.Context, search string) (map[*core.Movie][]string, error)
+	GetAllMoviesByRating(ctx context.Context) ([]*core.Movie, error)
+	GetAllMoviesByTitle(ctx context.Context) ([]*core.Movie, error)
+	GetAllMoviesByReleaseDate(ctx context.Context) ([]*core.Movie, error)
+	SearchMovie(ctx context.Context, search string) ([]*core.Movie, error)
 }
 
 type MovieService struct {
 	movieRepository MovieRepository
 }
 
-func NewSegmentService(movieRepository MovieRepository, localRepository MovieRepository, minioRepository MovieRepository) *MovieService {
+func NewMovieService(movieRepository MovieRepository) *MovieService {
 	return &MovieService{movieRepository: movieRepository}
 }
 
-func (service *MovieService) CreateMovie(ctx context.Context, movie *core.Movie, actors []int) error {
-	return service.movieRepository.CreateMovie(ctx, movie, actors)
+func (service *MovieService) CreateMovie(ctx context.Context, movie *core.Movie) error {
+	return service.movieRepository.CreateMovie(ctx, movie)
 }
 
 func (service *MovieService) DeleteMovie() error {
@@ -46,7 +46,7 @@ func (service *MovieService) DeleteActors(ctx context.Context, id int, actors []
 	return service.movieRepository.DeleteActors(ctx, id, actors)
 }
 
-func (service *MovieService) GetAll(ctx context.Context, id int, actors []string, sorting string) (map[*core.Movie][]string, error) {
+func (service *MovieService) GetAll(ctx context.Context, id int, actors []string, sorting string) ([]*core.Movie, error) {
 	switch sorting {
 	case "rating":
 		return service.movieRepository.GetAllMoviesByRating(ctx)
@@ -58,6 +58,6 @@ func (service *MovieService) GetAll(ctx context.Context, id int, actors []string
 	return nil, fmt.Errorf("Internal server error")
 }
 
-func (service *MovieService) SearchMovie(ctx context.Context, search string) (map[*core.Movie][]string, error) {
+func (service *MovieService) SearchMovie(ctx context.Context, search string) ([]*core.Movie, error) {
 	return service.movieRepository.SearchMovie(ctx, search)
 }

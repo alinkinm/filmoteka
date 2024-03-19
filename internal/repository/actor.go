@@ -117,8 +117,8 @@ func (repository *ActorRepository) DeleteActor(ctx context.Context, id int) erro
 
 }
 
-func (repository *ActorRepository) GetAllActors(ctx context.Context) (map[*core.Actor][]string, error) {
-	var actors map[*core.Actor][]string
+func (repository *ActorRepository) GetAllActors(ctx context.Context) ([]*core.Actor, error) {
+	var actors []*core.Actor
 
 	rows, err := repository.Db.QueryContext(ctx, GetAllActors)
 	if err == sql.ErrNoRows {
@@ -132,14 +132,13 @@ func (repository *ActorRepository) GetAllActors(ctx context.Context) (map[*core.
 
 	for rows.Next() {
 		actor := &core.Actor{}
-		actors_movies := []string{}
-		err = rows.Scan(&actor.Id, &actor.Name, &actor.Sex, &actor.Bd, actors_movies)
+		err = rows.Scan(&actor.Id, &actor.Name, &actor.Sex, &actor.Bd, &actor.Movies)
 
 		if err != nil {
 			log.Info(err.Error())
 			return nil, fmt.Errorf("Internal server error")
 		}
-		actors[actor] = actors_movies
+		actors = append(actors, actor)
 	}
 
 	return actors, nil

@@ -6,4 +6,5 @@ type Movie struct {
 	Descr   string `json:"descr" validate:"required"`
 	Release string `json:"release" validate:"required"`
 	Rating  int    `json:"rating" validate:"required"`
+	Actors  []int  `json:"actors" validate:"required"`
 }
